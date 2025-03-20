@@ -1,12 +1,15 @@
-from flask import Flask, request
+from flask import Flask, request,jsonify
 import pymongo
 from pymongo import MongoClient
 from flask import jsonify
-app = Flask(__name__)
 from flask_cors import CORS
 import bcrypt
 import re
 
+from task_list import task_list_bp    # rout connection with tasklist 
+
+
+app = Flask(__name__)
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 client = MongoClient("mongodb://localhost:27017")
@@ -31,56 +34,6 @@ def login():
             'msg':"user not exits",
             'classs':"danger"
         }
-    
-# @app.route("/register", methods=['POST'])
-# def register():
-#     input_data = request.get_json()
-    
-#     name = input_data.get('fullName')
-#     email = input_data.get('email')
-#     phonenumber = input_data.get('phonenumber')
-#     password = input_data.get('password')
-
-#     if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$", password):
-#         return jsonify({
-#             'status': 0,
-#             'msg': "Password must be 8-16 characters long, include uppercase, lowercase, a number, and a special character.",
-#             'class': "error"
-#         })
-
-#     if "gmail" in password.lower():
-#         return jsonify({
-#             'status': 0,
-#             'msg': "Password should not contain 'gmail'.",
-#             'class': "error"
-#         })
-
-#     user = db.useres.find_one({'email': email})
-#     if user:
-#         return jsonify({
-#             'status': 0,
-#             'msg': "User already exists",
-#             'class': "error"
-#         })
-
-#     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-#     count = db.useres.count_documents({})
-#     new_user = {
-#         "_id": count + 1,
-#         "fullName": name,
-#         "email": email,
-#         "phonenumber": phonenumber,
-#         "password": hashed_password.decode('utf-8')
-#     }
-
-#     db.useres.insert_one(new_user)
-    
-#     return jsonify({
-#         'status': 1,
-#         'msg': "User registered successfully",
-#         'class': "success"
-#     })
 
 @app.route("/register", methods=['POST'])
 def register():
@@ -152,3 +105,59 @@ def register():
         'msg': "User registered successfully",
         'class': "success"
     })
+
+
+
+
+
+
+
+# @app.route("/register", methods=['POST'])
+# def register():
+#     input_data = request.get_json()
+    
+#     name = input_data.get('fullName')
+#     email = input_data.get('email')
+#     phonenumber = input_data.get('phonenumber')
+#     password = input_data.get('password')
+
+#     if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$", password):
+#         return jsonify({
+#             'status': 0,
+#             'msg': "Password must be 8-16 characters long, include uppercase, lowercase, a number, and a special character.",
+#             'class': "error"
+#         })
+
+#     if "gmail" in password.lower():
+#         return jsonify({
+#             'status': 0,
+#             'msg': "Password should not contain 'gmail'.",
+#             'class': "error"
+#         })
+
+#     user = db.useres.find_one({'email': email})
+#     if user:
+#         return jsonify({
+#             'status': 0,
+#             'msg': "User already exists",
+#             'class': "error"
+#         })
+
+#     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+#     count = db.useres.count_documents({})
+#     new_user = {
+#         "_id": count + 1,
+#         "fullName": name,
+#         "email": email,
+#         "phonenumber": phonenumber,
+#         "password": hashed_password.decode('utf-8')
+#     }
+
+#     db.useres.insert_one(new_user)
+    
+#     return jsonify({
+#         'status': 1,
+#         'msg': "User registered successfully",
+#         'class': "success"
+#     })
