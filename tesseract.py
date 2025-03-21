@@ -120,7 +120,7 @@ from flask import Flask, request, jsonify
 import pytesseract
 from PIL import Image
 import os
-from fuzzywuzzy import fuzz  s
+from fuzzywuzzy import fuzz  
 
 app = Flask(__name__)
 
