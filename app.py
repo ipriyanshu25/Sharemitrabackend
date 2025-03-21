@@ -1,39 +1,50 @@
-from flask import Flask, request,jsonify
-import pymongo
-from pymongo import MongoClient
-from flask import jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pymongo import MongoClient
 import bcrypt
 import re
 
-from task_list import task_list_bp    # rout connection with tasklist 
-
-
+from task_list import task_list_bp    # routes from task_list.py
+from image_analysis import image_analysis_bp  # routes from image_analysis.py
+from payment_details import payment_details_bp
 app = Flask(__name__)
 
+# Enable CORS
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Connect to MongoDB
 client = MongoClient("mongodb://localhost:27017")
 db = client["enolity"]
-collection = db['useres']
+
+# Register blueprints so that the routes defined in the blueprints become active.
+# You can also provide a URL prefix if you want.
+app.register_blueprint(task_list_bp, url_prefix="/task")
+app.register_blueprint(image_analysis_bp, url_prefix="/image")
+app.register_blueprint(payment_details_bp, url_prefix="/payment")
 
 @app.route("/login", methods=['POST'])
 def login():
     input_data = request.get_json()
     email = input_data['email']
     password = input_data['password']
-    user = db.useres.find_one({'email':email,'password':password})
-    if user and '_id' in user:
-        return{
-            'status':1,
-            'msg':"user exits",
-            'classs':"success"
-        }
+    
+    # Retrieve the user by email
+    user = db.useres.find_one({'email': email})
+    
+    # Check if user exists and verify the password
+    if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+        return jsonify({
+            'status': 1,
+            'msg': "User exists",
+            'classs': "success",
+            'user': user
+        })
     else:
-        return{
-            'status':0,
-            'msg':"user not exits",
-            'classs':"danger"
-        }
+        return jsonify({
+            'status': 0,
+            'msg': "User not exists",
+            'classs': "danger"
+        })
 
 @app.route("/register", methods=['POST'])
 def register():
@@ -76,7 +87,7 @@ def register():
             'class': "error"
         })
 
-    # Check the number of registrations for this phone number (limit to 3 emails per number)
+    # Limit registrations per phone number to 3
     email_count = db.useres.count_documents({'phonenumber': phonenumber})
     if email_count >= 3:
         return jsonify({
@@ -106,6 +117,8 @@ def register():
         'class': "success"
     })
 
+if __name__ == '__main__':
+    app.run(debug=True)
 
 
 
