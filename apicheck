@@ -1,0 +1,824 @@
+# # # app.py
+# # from flask import Flask, request, jsonify
+# # import os
+# # import base64
+# # from werkzeug.utils import secure_filename
+# # import requests
+# # import json
+# # from datetime import datetime
+
+# # app = Flask(__name__)
+
+# # # Configuration
+# # UPLOAD_FOLDER = 'uploads'
+# # ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+# # app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# # app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# # # OpenAI API key - replace with your actual key
+# # OPENAI_API_KEY = "apikey"
+# # OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+
+# # # Ensure upload directory exists
+# # os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# # # Function to check if file extension is allowed
+# # def allowed_file(filename):
+# #     return '.' in filename and \
+# #            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# # def encode_image_to_base64(image_path):
+# #     """Encode image to base64 string"""
+# #     with open(image_path, "rb") as image_file:
+# #         return base64.b64encode(image_file.read()).decode('utf-8')
+
+# # def analyze_image_with_openai(image_path, expected_link):
+# #     """
+# #     Use OpenAI's Vision API to analyze the image and verify if it's a WhatsApp broadcast
+# #     and contains the expected link.
+# #     """
+# #     try:
+# #         # Encode image to base64
+# #         base64_image = encode_image_to_base64(image_path)
+        
+# #         # Construct the prompt for OpenAI
+# #         prompt = f"""
+# #         Analyze this image and determine if it's a screenshot of a WhatsApp broadcast message.
+        
+# #         Specifically check for:
+# #         1. Is this clearly a WhatsApp interface?
+# #         2. Does the screenshot contain this exact link or URL: '{expected_link}'?
+# #         3. What is the timestamp or time of the message (if visible)?
+        
+# #         Format your response as JSON with these fields:
+# #         - is_whatsapp_screenshot (boolean)
+# #         - contains_expected_link (boolean)
+# #         - timestamp (string, format as shown in image)
+# #         - confidence_score (1-10)
+# #         - reason (brief explanation)
+# #         """
+        
+# #         # Make API request to OpenAI
+# #         headers = {
+# #             "Content-Type": "application/json",
+# #             "Authorization": f"Bearer {OPENAI_API_KEY}"
+# #         }
+        
+# #         payload = {
+# #             "model": "gpt-4-vision-preview",
+# #             "messages": [
+# #                 {
+# #                     "role": "user",
+# #                     "content": [
+# #                         {
+# #                             "type": "text",
+# #                             "text": prompt
+# #                         },
+# #                         {
+# #                             "type": "image_url",
+# #                             "image_url": {
+# #                                 "url": f"data:image/jpeg;base64,{base64_image}"
+# #                             }
+# #                         }
+# #                     ]
+# #                 }
+# #             ],
+# #             "max_tokens": 500,
+# #             "response_format": {"type": "json_object"}
+# #         }
+        
+# #         response = requests.post(OPENAI_API_URL, headers=headers, data=json.dumps(payload))
+        
+# #         if response.status_code == 200:
+# #             # Extract the JSON output from the response
+# #             result = response.json()
+# #             content = json.loads(result["choices"][0]["message"]["content"])
+            
+# #             # Determine if verification passed
+# #             verified = content.get("is_whatsapp_screenshot", False) and content.get("contains_expected_link", False)
+            
+# #             return {
+# #                 "verified": verified,
+# #                 "message": "Image analyzed successfully",
+# #                 "details": content
+# #             }
+# #         else:
+# #             return {
+# #                 "verified": False,
+# #                 "message": f"API Error: {response.status_code}",
+# #                 "details": response.text
+# #             }
+            
+# #     except Exception as e:
+# #         return {"verified": False, "message": f"Error processing image: {str(e)}"}
+
+# # # Alternatively, you can use Claude API if preferred
+# # def analyze_image_with_claude(image_path, expected_link):
+# #     """
+# #     Use Anthropic's Claude API to analyze the image and verify if it's a WhatsApp broadcast
+# #     and contains the expected link.
+# #     """
+# #     try:
+# #         # Encode image to base64
+# #         base64_image = encode_image_to_base64(image_path)
+        
+# #         # API endpoint for Claude
+# #         api_url = "https://api.anthropic.com/v1/messages"
+        
+# #         # Headers for the request
+# #         headers = {
+# #             "Content-Type": "application/json",
+# #             "X-Api-Key": "your_claude_api_key_here",
+# #             "anthropic-version": "2023-06-01"
+# #         }
+        
+# #         # Construct the prompt for Claude
+# #         prompt = f"""
+# #         Analyze this image and determine if it's a screenshot of a WhatsApp broadcast message.
+        
+# #         Specifically check for:
+# #         1. Is this clearly a WhatsApp interface?
+# #         2. Does the screenshot contain this exact link or URL: '{expected_link}'?
+# #         3. What is the timestamp or time of the message (if visible)?
+        
+# #         Format your response as JSON with these fields:
+# #         - is_whatsapp_screenshot (boolean)
+# #         - contains_expected_link (boolean)
+# #         - timestamp (string, format as shown in image)
+# #         - confidence_score (1-10)
+# #         - reason (brief explanation)
+# #         """
+        
+# #         # Payload for the request
+# #         payload = {
+# #             "model": "claude-3-opus-20240229",
+# #             "max_tokens": 1000,
+# #             "messages": [
+# #                 {
+# #                     "role": "user",
+# #                     "content": [
+# #                         {
+# #                             "type": "text",
+# #                             "text": prompt
+# #                         },
+# #                         {
+# #                             "type": "image",
+# #                             "source": {
+# #                                 "type": "base64",
+# #                                 "media_type": "image/jpeg",
+# #                                 "data": base64_image
+# #                             }
+# #                         }
+# #                     ]
+# #                 }
+# #             ],
+# #             "response_format": {"type": "json_object"}
+# #         }
+        
+# #         # Make the API request
+# #         response = requests.post(api_url, headers=headers, json=payload)
+        
+# #         if response.status_code == 200:
+# #             # Extract the JSON output from the response
+# #             result = response.json()
+# #             content = json.loads(result["content"][0]["text"])
+            
+# #             # Determine if verification passed
+# #             verified = content.get("is_whatsapp_screenshot", False) and content.get("contains_expected_link", False)
+            
+# #             return {
+# #                 "verified": verified,
+# #                 "message": "Image analyzed successfully",
+# #                 "details": content
+# #             }
+# #         else:
+# #             return {
+# #                 "verified": False,
+# #                 "message": f"API Error: {response.status_code}",
+# #                 "details": response.text
+# #             }
+            
+# #     except Exception as e:
+# #         return {"verified": False, "message": f"Error processing image: {str(e)}"}
+
+# # @app.route('/api/verify', methods=['POST'])
+# # def verify_image():
+# #     # Check if the post request has the file part
+# #     if 'image' not in request.files:
+# #         return jsonify({"error": "No image file provided"}), 400
+    
+# #     file = request.files['image']
+    
+# #     # If user does not select file, browser also
+# #     # submit an empty part without filename
+# #     if file.filename == '':
+# #         return jsonify({"error": "No image selected"}), 400
+    
+# #     # Get the expected link from the form data
+# #     expected_link = request.form.get('expected_link', '')
+# #     if not expected_link:
+# #         return jsonify({"error": "Expected link not provided"}), 400
+    
+# #     if file and allowed_file(file.filename):
+# #         # Process the file
+# #         filename = secure_filename(file.filename)
+# #         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+# #         file.save(file_path)
+        
+# #         # Select which AI service to use (OpenAI or Claude)
+# #         # Uncomment the service you want to use
+# #         result = analyze_image_with_openai(file_path, expected_link)
+# #         # result = analyze_image_with_claude(file_path, expected_link)
+        
+# #         # Return the result
+# #         return jsonify(result)
+# #     else:
+# #         return jsonify({"error": "File type not allowed"}), 400
+
+# # # Simple health check endpoint
+# # @app.route('/health', methods=['GET'])
+# # def health_check():
+# #     return jsonify({"status": "healthy", "message": "API is running"})
+
+# # if __name__ == '__main__':
+# #     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # app.py
+# # from flask import Flask, request, jsonify
+# # import os
+# # import base64
+# # from werkzeug.utils import secure_filename
+# # import requests
+# # import json
+# # from datetime import datetime
+
+# # app = Flask(__name__)
+
+# # # Configuration
+# # UPLOAD_FOLDER = 'uploads'
+# # ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+# # app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# # app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# # # OpenAI API key - replace with your actual key
+# # OPENAI_API_KEY = "apikey"
+# # OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+
+# # # Ensure upload directory exists
+# # os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# # # Function to check if file extension is allowed
+# # def allowed_file(filename):
+# #     return '.' in filename and \
+# #            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# # def encode_image_to_base64(image_path):
+# #     """Encode image to base64 string"""
+# #     with open(image_path, "rb") as image_file:
+# #         return base64.b64encode(image_file.read()).decode('utf-8')
+
+# # def analyze_image_with_openai(image_path, expected_link):
+# #     """
+# #     Use OpenAI's Vision API to analyze the image and verify if it's a WhatsApp broadcast
+# #     and contains the expected link.
+# #     """
+# #     try:
+# #         # Encode image to base64
+# #         base64_image = encode_image_to_base64(image_path)
+        
+# #         # Construct the prompt for OpenAI
+# #         prompt = f"""
+# #         Analyze this image and determine if it's a screenshot of a WhatsApp broadcast message.
+        
+# #         Specifically check for:
+# #         1. Is this clearly a WhatsApp interface?
+# #         2. Does the screenshot contain this exact link or URL: '{expected_link}'?
+# #         3. What is the timestamp or time of the message (if visible)?
+        
+# #         Format your response as JSON with these fields:
+# #         - is_whatsapp_screenshot (boolean)
+# #         - contains_expected_link (boolean)
+# #         - timestamp (string, format as shown in image)
+# #         - confidence_score (1-10)
+# #         - reason (brief explanation)
+# #         """
+        
+# #         # Make API request to OpenAI
+# #         headers = {
+# #             "Content-Type": "application/json",
+# #             "Authorization": f"Bearer {OPENAI_API_KEY}"
+# #         }
+        
+# #         # Updated to use the current GPT-4 model with vision capabilities
+# #         payload = {
+# #             "model": "gpt-4o",  # Updated from gpt-4-vision-preview to gpt-4o
+# #             "messages": [
+# #                 {
+# #                     "role": "user",
+# #                     "content": [
+# #                         {
+# #                             "type": "text",
+# #                             "text": prompt
+# #                         },
+# #                         {
+# #                             "type": "image_url",
+# #                             "image_url": {
+# #                                 "url": f"data:image/jpeg;base64,{base64_image}"
+# #                             }
+# #                         }
+# #                     ]
+# #                 }
+# #             ],
+# #             "max_tokens": 500,
+# #             "response_format": {"type": "json_object"}
+# #         }
+        
+# #         response = requests.post(OPENAI_API_URL, headers=headers, data=json.dumps(payload))
+        
+# #         if response.status_code == 200:
+# #             # Extract the JSON output from the response
+# #             result = response.json()
+# #             content = json.loads(result["choices"][0]["message"]["content"])
+            
+# #             # Determine if verification passed
+# #             verified = content.get("is_whatsapp_screenshot", False) and content.get("contains_expected_link", False)
+            
+# #             return {
+# #                 "verified": verified,
+# #                 "message": "Image analyzed successfully",
+# #                 "details": content
+# #             }
+# #         else:
+# #             return {
+# #                 "verified": False,
+# #                 "message": f"API Error: {response.status_code}",
+# #                 "details": response.text
+# #             }
+            
+# #     except Exception as e:
+# #         return {"verified": False, "message": f"Error processing image: {str(e)}"}
+
+# # # Alternatively, you can use Claude API if preferred
+# # def analyze_image_with_claude(image_path, expected_link):
+# #     """
+# #     Use Anthropic's Claude API to analyze the image and verify if it's a WhatsApp broadcast
+# #     and contains the expected link.
+# #     """
+# #     try:
+# #         # Encode image to base64
+# #         base64_image = encode_image_to_base64(image_path)
+        
+# #         # API endpoint for Claude
+# #         api_url = "https://api.anthropic.com/v1/messages"
+        
+# #         # Headers for the request
+# #         headers = {
+# #             "Content-Type": "application/json",
+# #             "x-api-key": "your_claude_api_key_here",  # Updated from X-Api-Key to x-api-key
+# #             "anthropic-version": "2023-06-01"
+# #         }
+        
+# #         # Construct the prompt for Claude
+# #         prompt = f"""
+# #         Analyze this image and determine if it's a screenshot of a WhatsApp broadcast message.
+        
+# #         Specifically check for:
+# #         1. Is this clearly a WhatsApp interface?
+# #         2. Does the screenshot contain this exact link or URL: '{expected_link}'?
+# #         3. What is the timestamp or time of the message (if visible)?
+        
+# #         Format your response as JSON with these fields:
+# #         - is_whatsapp_screenshot (boolean)
+# #         - contains_expected_link (boolean)
+# #         - timestamp (string, format as shown in image)
+# #         - confidence_score (1-10)
+# #         - reason (brief explanation)
+# #         """
+        
+# #         # Payload for the request - updated for current Claude model
+# #         payload = {
+# #             "model": "claude-3-sonnet-20240229",  # Updated to a current Claude model
+# #             "max_tokens": 1000,
+# #             "messages": [
+# #                 {
+# #                     "role": "user",
+# #                     "content": [
+# #                         {
+# #                             "type": "text",
+# #                             "text": prompt
+# #                         },
+# #                         {
+# #                             "type": "image",
+# #                             "source": {
+# #                                 "type": "base64",
+# #                                 "media_type": "image/jpeg",
+# #                                 "data": base64_image
+# #                             }
+# #                         }
+# #                     ]
+# #                 }
+# #             ]
+# #         }
+        
+# #         # Make the API request
+# #         response = requests.post(api_url, headers=headers, json=payload)
+        
+# #         if response.status_code == 200:
+# #             # Extract the JSON output from the response
+# #             result = response.json()
+# #             # Parse the JSON content from the response
+# #             content_text = result["content"][0]["text"]
+# #             # Extract JSON from the text response
+# #             import re
+# #             json_match = re.search(r'({.*})', content_text, re.DOTALL)
+# #             if json_match:
+# #                 content = json.loads(json_match.group(1))
+# #             else:
+# #                 content = {"error": "Could not parse JSON from Claude response"}
+            
+# #             # Determine if verification passed
+# #             verified = content.get("is_whatsapp_screenshot", False) and content.get("contains_expected_link", False)
+            
+# #             return {
+# #                 "verified": verified,
+# #                 "message": "Image analyzed successfully",
+# #                 "details": content
+# #             }
+# #         else:
+# #             return {
+# #                 "verified": False,
+# #                 "message": f"API Error: {response.status_code}",
+# #                 "details": response.text
+# #             }
+            
+# #     except Exception as e:
+# #         return {"verified": False, "message": f"Error processing image: {str(e)}"}
+
+# # @app.route('/api/verify', methods=['POST'])
+# # def verify_image():
+# #     # Check if the post request has the file part
+# #     if 'image' not in request.files:
+# #         return jsonify({"error": "No image file provided"}), 400
+    
+# #     file = request.files['image']
+    
+# #     # If user does not select file, browser also
+# #     # submit an empty part without filename
+# #     if file.filename == '':
+# #         return jsonify({"error": "No image selected"}), 400
+    
+# #     # Get the expected link from the form data
+# #     expected_link = request.form.get('expected_link', '')
+# #     if not expected_link:
+# #         return jsonify({"error": "Expected link not provided"}), 400
+    
+# #     if file and allowed_file(file.filename):
+# #         # Process the file
+# #         filename = secure_filename(file.filename)
+# #         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+# #         file.save(file_path)
+        
+# #         # You can switch between OpenAI and Claude here
+# #         result = analyze_image_with_openai(file_path, expected_link)
+# #         # result = analyze_image_with_claude(file_path, expected_link)
+        
+# #         # Return the result
+# #         return jsonify(result)
+# #     else:
+# #         return jsonify({"error": "File type not allowed"}), 400
+
+
+# # @app.route('/api/check_openai_key', methods=['GET'])
+# # def check_openai_api_key():
+# #     """Check if the OpenAI API key is valid and working"""
+# #     try:
+# #         headers = {
+# #             "Content-Type": "application/json",
+# #             "Authorization": f"Bearer {OPENAI_API_KEY}"
+# #         }
+        
+# #         payload = {
+# #             "model": "gpt-4o",
+# #             "messages": [{"role": "user", "content": "Hello, are you working?"}],
+# #             "max_tokens": 5
+# #         }
+        
+# #         response = requests.post(OPENAI_API_URL, headers=headers, json=payload)
+        
+# #         if response.status_code == 200:
+# #             return jsonify({"status": "success", "message": "OpenAI API key is working"}), 200
+# #         else:
+# #             return jsonify({"status": "error", "message": f"API Error: {response.status_code}", "details": response.text}), 400
+    
+# #     except Exception as e:
+# #         return jsonify({"status": "error", "message": f"Error checking API key: {str(e)}"}), 500
+
+
+# # # Simple health check endpoint
+# # @app.route('/health', methods=['GET'])
+# # def health_check():
+# #     return jsonify({"status": "healthy", "message": "API is running"})
+
+# # if __name__ == '__main__':
+# #     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# from flask import Flask, request, jsonify
+# import os
+# import base64
+# from werkzeug.utils import secure_filename
+# import requests
+# import json
+
+# app = Flask(__name__)
+
+# # Configuration
+# UPLOAD_FOLDER = 'uploads'
+# ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# # OpenAI API key (Replace with a new, valid key)
+# OPENAI_API_KEY = "apikey"
+# OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+
+# # Ensure upload directory exists
+# os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+# # Function to check if file extension is allowed
+# def allowed_file(filename):
+#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# def encode_image_to_base64(image_path):
+#     """Encode image to base64 string"""
+#     with open(image_path, "rb") as image_file:
+#         return base64.b64encode(image_file.read()).decode('utf-8')
+
+
+# def analyze_image_with_openai(image_path, expected_link):
+#     """
+#     Use OpenAI's Vision API to analyze the image and verify if it's a WhatsApp broadcast
+#     and contains the expected link.
+#     """
+#     try:
+#         base64_image = encode_image_to_base64(image_path)
+
+#         prompt = f"""
+#         Analyze this image and determine if it's a screenshot of a WhatsApp broadcast message.
+        
+#         Specifically check for:
+#         1. Is this clearly a WhatsApp interface?
+#         2. Does the screenshot contain this exact link or URL: '{expected_link}'?
+#         3. What is the timestamp or time of the message (if visible)?
+        
+#         Format your response as JSON with these fields:
+#         - is_whatsapp_screenshot (boolean)
+#         - contains_expected_link (boolean)
+#         - timestamp (string, format as shown in image)
+#         - confidence_score (1-10)
+#         - reason (brief explanation)
+#         """
+
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Bearer {OPENAI_API_KEY}"
+#         }
+
+#         payload = {
+#             "model": "gpt-3.5-turbo",
+#             "messages": [
+#                 {
+#                     "role": "user",
+#                     "content": [
+#                         {"type": "text", "text": prompt},
+#                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+#                     ]
+#                 }
+#             ],
+#             "max_tokens": 500,
+#             "response_format": "json"
+#         }
+
+#         response = requests.post(OPENAI_API_URL, headers=headers, json=payload)
+
+#         if response.status_code == 200:
+#             result = response.json()
+#             content = json.loads(result["choices"][0]["message"]["content"])
+
+#             verified = content.get("is_whatsapp_screenshot", False) and content.get("contains_expected_link", False)
+
+#             return {
+#                 "verified": verified,
+#                 "message": "Image analyzed successfully",
+#                 "details": content
+#             }
+#         else:
+#             return {
+#                 "verified": False,
+#                 "message": f"API Error: {response.status_code}",
+#                 "details": response.text
+#             }
+
+#     except Exception as e:
+#         return {"verified": False, "message": f"Error processing image: {str(e)}"}
+
+
+# @app.route('/api/verify', methods=['POST'])
+# def verify_image():
+#     if 'image' not in request.files:
+#         return jsonify({"error": "No image file provided"}), 400
+
+#     file = request.files['image']
+
+#     if file.filename == '':
+#         return jsonify({"error": "No image selected"}), 400
+
+#     expected_link = request.form.get('expected_link', '')
+#     if not expected_link:
+#         return jsonify({"error": "Expected link not provided"}), 400
+
+#     if file and allowed_file(file.filename):
+#         filename = secure_filename(file.filename)
+#         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#         file.save(file_path)
+
+#         result = analyze_image_with_openai(file_path, expected_link)
+
+#         return jsonify(result)
+#     else:
+#         return jsonify({"error": "File type not allowed"}), 400
+
+
+# @app.route('/api/check_openai_key', methods=['GET'])
+# def check_openai_api_key():
+#     """Check if the OpenAI API key is valid and working"""
+#     try:
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Bearer {OPENAI_API_KEY}"
+#         }
+
+#         payload = {
+#             "model": "gpt-4o",
+#             "messages": [
+#                 {"role": "system", "content": "You are a helpful assistant."},
+#                 {"role": "user", "content": "Test message to check API functionality."}
+#             ],
+#             "max_tokens": 20
+#         }
+
+#         response = requests.post(OPENAI_API_URL, headers=headers, json=payload)
+
+#         if response.status_code == 200:
+#             return jsonify({"status": "success", "message": "OpenAI API key is working"}), 200
+#         else:
+#             return jsonify({"status": "error", "message": f"API Error: {response.status_code}", "details": response.text}), response.status_code
+
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": f"Error checking API key: {str(e)}"}), 500
+
+
+# @app.route('/health', methods=['GET'])
+# def health_check():
+#     return jsonify({"status": "healthy", "message": "API is running"})
+
+
+# if __name__ == '__main__':
+#     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+# from flask import Flask, request, jsonify
+# from openai import OpenAI
+# import requests
+
+# app = Flask(__name__)
+
+# OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+
+# @app.route('/check_openai_key', methods=['GET'])
+# def check_openai_key():
+#     api_key = request.args.get('api_key')
+#     if not api_key:
+#         return jsonify({"error": "API key is required"}), 400
+    
+#     headers = {
+#         "Authorization": f"Bearer {api_key}",
+#         "Content-Type": "application/json"
+#     }
+    
+#     payload = {
+#         "model": "gpt-3.5-turbo",
+#         "messages": [{"role": "system", "content": "Say 'Hello World'"}]
+#     }
+    
+#     try:
+#         response = requests.post(OPENAI_API_URL, headers=headers, json=payload, timeout=10)
+#         status_code = response.status_code
+#         response_json = response.json()
+        
+#         if status_code == 401:
+#             return jsonify({
+#                 "status_code": status_code,
+#                 "error": "Invalid API key",
+#                 "is_working": False
+#             })
+#         elif status_code == 429:
+#             return jsonify({
+#                 "status_code": status_code,
+#                 "error": "Quota exceeded, but API key is valid",
+#                 "is_working": False
+#             })
+        
+#         return jsonify({
+#             "status_code": status_code,
+#             "is_working": status_code == 200,
+#             "response": response_json
+#         })
+#     except requests.exceptions.RequestException as e:
+#         return jsonify({"error": str(e)}), 500
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+from dotenv import load_dotenv
+import os
+import openai
+
+# client = OpenAI(api_key = os.environ.get("OPENAI_API_KEY"))
+client = openai.OpenAI(api_key="")
+
+
+chat = client.chat.completions.create(
+    messages=[
+        {
+            "role" : "user",
+            "content" : "what is the capital of india"
+        }
+    ],
+    model = "gpt-3.5-turbo"
+)
+
+response_message = chat.choices[0].message.content
+print(response_message)
